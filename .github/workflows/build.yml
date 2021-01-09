@@ -36,8 +36,6 @@ jobs:
         run: wget http://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
       - name: unzip build wrapper
         run: unzip ./build-wrapper-linux-x86.zip
-      - name: run configure
-        run: ./configure
       - name: run build wrapper
         run: ./build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir build_wrapper_output_directory make
       - name: run sonar scanner
