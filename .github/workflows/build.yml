@@ -2,19 +2,48 @@ name: Build
 on:
   push:
     branches:
-      - master
+      - trunk
   pull_request:
     types: [opened, synchronize, reopened]
 jobs:
   sonarcloud:
     name: SonarCloud
-    runs-on: ubuntu-latest
+    runs-on: Ubuntu-20.04
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
+      - name: update sources
+        run: sudo apt update
+      - name: install build system
+        run: |
+          sudo apt install build-essential ccache ecj fastjar file g++ gawk \
+          gettext git java-propose-classpath libelf-dev libncurses5-dev \
+          libncursesw5-dev libssl-dev python python2.7-dev python3 unzip wget \
+          python3-distutils python3-setuptools rsync subversion swig time \
+          xsltproc zlib1g-dev
+      - name: download build info for x86_64 architecture
+        run: wget https://downloads.openwrt.org/releases/19.07.0/targets/x86/64/config.buildinfo -O .config
+      - name: make defconfig
+        run: make defconfig
+      - name: make download
+        run: make download
+      - name: download sonar scanner
+        run: wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.5.0.2216-linux.zip
+      - name: unzip sonar scanner
+        run: unzip sonar-scanner-cli-4.5.0.2216-linux.zip
+      - name: download build wrapper
+        run: wget http://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+      - name: unzip build wrapper
+        run: unzip ./build-wrapper-linux-x86.zip
+      - name: run configure
+        run: ./configure
+      - name: run build wrapper
+        run: ./build-wrapper-linux-x86/build-wrapper-linux-x86-64 --out-dir build_wrapper_output_directory make
+      - name: run sonar scanner
+        run: ./sonar-scanner-4.5.0.2216-linux/bin/sonar-scanner   -Dsonar.organization=$SONAR_ORG   -Dsonar.projectKey=$SONAR_PROJECT_KEY   -Dsonar.sources=.   -Dsonar.host.url=https://sonarcloud.io
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_ORG: 167179
+          SONAR_PROJECT_KEY: 167179_openwrt
